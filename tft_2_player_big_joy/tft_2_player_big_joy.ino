@@ -26,7 +26,9 @@
 // (for UNO thats sclk = 13 and sid = 11) and pin 10 must be 
 // an output. This is much faster - also required if you want
 // to use the microSD card (see the image drawing example)
-ST7735 tft = ST7735(cs, dc, rst);
+
+// sc ----> SS wire difference SLAVE SELECT
+ST7735 tft = ST7735(SS, dc, rst);
 float p = 3.141592; // value for pi
 int tft_width = 128;
 int tft_height = 160;
