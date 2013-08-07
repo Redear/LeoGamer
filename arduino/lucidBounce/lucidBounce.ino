@@ -5,11 +5,26 @@ Bounce is a Pong like game that gives the player a bouncing
 ball which increases with speed after every bounce off the
 control paddle.
 
+URL FOR TUTORIAL:: TODO
+
 This file uses the adafruit library ST7735 which can be
 found at this url: XXXXXXXXXXXXXXXXXXXXXX
 
+joystick read lines:
+digitalRead(12)
+int cur_x =  analogRead(0);
+int cur_y =  1024 - analogRead(2);  
+int cur_y =  1024 - analogRead(1);
+  i
+
 	
 */
+
+#ifdef DEBUG
+  #define DEBUG_PRINT(x)  Serial.println (x)
+#else
+  #define DEBUG_PRINT(x)
+#endif
 
 // Pins SCLK and MOSI are fixed in hardware, and pin 10 (or 53) 
 // must be an output
@@ -44,17 +59,19 @@ found at this url: XXXXXXXXXXXXXXXXXXXXXX
 ST7735 tft = ST7735(SS, dc, rst);
 
 //Create constants as such
-float p = 3.141592; // value for pi
-int tft_width = 128;
-int tft_height = 160;
-int x1 = 60;
-int y1 = 60;
-int x2 = 20;
-int y2 = 80;
-int ballx = 60;
-int bally = 60;
-int deltay = 1;
-int deltax = 1;
+const float PIE = 3.141592; // value for pi
+const int tft_width = 128;
+const int tft_height = 160;
+int ball_radius=3;
+int bounce_count=1;
+int paddle_x= 60;
+int paddle_y= 152;
+int paddle_width= ball_radius*7;
+int paddle_height=3;
+float ballx = 60.0;
+float bally = 60.0;
+float deltay = 1.0;
+float deltax = .5;
 
 int ball_speed = 24;
 
@@ -65,10 +82,9 @@ int left_score = 3;
 int right_leds[] = {5,6,7};
 int right_score = 3;
 
-int background_color = 0x00;
+int background_color =BLACK;
 void setup(void) {
   tft.initR();               // initialize a ST7735R chip
-
   tft.writecommand(ST7735_DISPON);
   tft.fillScreen(background_color);
   delay(700);
@@ -85,17 +101,26 @@ void setup(void) {
   delay(500);
   
 }
+int cur_r = random(20,32);
+int cur_g = random(55,64);
+int cur_b = random(10,32);
 
 void loop() {  
-  int cur_r = random(20,32);
-  int cur_g = random(55,64);
-  int cur_b = random(10,32);
-  int color = cur_r  | (cur_g << 5) | (cur_b << 11); 
-  int radius = 4;
-  draw_paddles();
-  draw_ball(color);
+  int color = cur_r  | (cur_g << 5) | (cur_b << 11); //what kind of calculation is this?
+  
+  draw_paddle();
+  draw_ball(color,ball_radius, bounce_count);
+//  if (bounce_count > 7){
+//    draw_ball(RED, ball_radius*2,bounce_count);
+ // }
+  //tft.drawString(2,42, "debug with drawString" ,~background_color,2);
   delay(ball_speed);
+ 
 }
+
+/*function: draw_input_text
+  usage: 
+*/
 void draw_input_text(){ 
   int cur_x2 =  analogRead(2);
   int cur_y2 =  analogRead(3);  
@@ -115,6 +140,36 @@ void draw_input_text(){
   tft.drawString(12,22,cx ,YELLOW);
   tft.drawString(12,40,cy ,YELLOW);
 }
+/*
+  function: draw_paddle
+  usage:  draw_paddle();
+  **********************************************
+  draws the bounce paddle to the screen using analogRead for current x and y
+  working on a two potentiameter joystick that reads analog values from 0 - 1024
+  525 is straight up and down.  
+  
+*/
+void draw_paddle(){
+  int cur_x =  analogRead(0);
+  //int cur_y =  1024 - analogRead(2);  
+  int cur_y =  1024 - analogRead(1);
+  int rightVal = 620; //what the hell are these
+  int leftVal = 350;
+ 
+  if ( paddle_x+15 < tft_width  && cur_x > rightVal) paddle_x+=3;//move paddle right
+  else if ( paddle_x > 0 && cur_x < leftVal ) paddle_x-=3; //move paddle left 
+  
+  
+  //tft.fillRect(topLeftX,topLeftY,width, height, color);
+  tft.fillRect(paddle_x-5, paddle_y-5, paddle_width*2, paddle_height+5, background_color);
+  tft.fillRect(paddle_x, paddle_y, paddle_width, paddle_height, YELLOW);
+  Serial.print("current x =");
+  Serial.print(cur_x);
+  
+  //DEBUG_PRINT ("I think I'm here");
+
+}
+/*
 void draw_paddles(){
   int cur_x =  analogRead(3);
   int cur_y =  1024 - analogRead(2);  
@@ -135,61 +190,56 @@ void draw_paddles(){
   tft.fillRect(tft_width-3, y2-3, 5, 27,background_color);
   tft.fillRect(tft_width-3, y2, 3, 20, YELLOW);
 }
-void draw_ball(int color){
-   int bradius = 6;
+
+*/
+
+/*  function: draw_ball
+    usage:  draw_ball(color, radius);
+    *************************************************
+    draws the ball to the screen.  Also, controls ball logic for bouncing off the wall
+    and winning conditions
+*/
+void draw_ball(int color, int bradius, int &bounce_number){
+  // int bradius = 3;
+    //tft.fillCircle(centerX,centerY,radius,color);
+    tft.fillCircle(ballx,bally, bradius+3, background_color);
     tft.fillCircle(ballx, bally, bradius , color);
+     /* ball velocity delta's   */
     ballx += deltax;
     bally += deltay;
-    if ( ballx < 7 && bally > y1 && bally < y1+20) deltax *= -1;
-    else if ( ballx > tft_width-7 && bally > y2 && bally < y2+20) deltax *= -1;
-    else if ( bally <= bradius || bally >= tft_height - bradius ) deltay *= -1;
-    if (ballx <=  0 ) {
-      left_score--;
-      for(int i = 0; i < 3; i++){
-        digitalWrite(left_leds[i],LOW);
-      }
-      delay(200);
-      for(int i = 0; i < left_score; i++){
-        digitalWrite(left_leds[i],HIGH);
-      }
+    
+    if (ballx > tft_width -1) deltax *= -1;
+    else if (ballx <=1) deltax *= -1;
+    else if( ballx >= paddle_x && ballx <= paddle_x+paddle_width && bally> paddle_y-bradius){ 
+       if(bounce_number %5 ==0){
+          paddle_width-= ball_radius;
+      } 
+      deltay *= -1.1;
+      deltax *= 1.1;
+      bally=paddle_y-(bradius+1);
+      bounce_number++;
+
+    }
+    else if (bally <= bradius ) deltay *= -1;
+     // losing condition   
+    else if(bally >  paddle_y ) {
   
+    
       int cur_r = random(0,26);
       int cur_g = random(0,30);
       int cur_b = random(0,18);
       background_color = cur_r  | (cur_g << 5) | (cur_b << 11); 
       tft.fillScreen(background_color);
-      tft.drawString(2,42, "Right Won!" ,~background_color,2);
+      tft.drawString(2,42, "YOU LOSE!" ,~background_color,2);
       tft.drawString(2,62, "Get Ready!" ,CYAN,2);
-      for (int i = 0; i <250; i++){
-        delay(10);
-        draw_paddles();
-      }
+      deltax= random(-1,1)+.5;
+      deltay= random(0,1)?  +.5: 1;
+   
+      delay(1000);
+      //draw_paddle();
+
       
       ballx = 64;
-      bally = 80;
-      if (ball_speed > 1) ball_speed--;
-    } else if (ballx >= tft_width  ) {
-      right_score --;
-      for(int i = 0; i < 3; i++){
-        digitalWrite(right_leds[i],LOW);
-      }
-      delay(200);
-      for(int i = 0; i < right_score; i++){
-        digitalWrite(right_leds[i],HIGH);
-      }
-      int cur_r = random(0,26);
-      int cur_g = random(0,30);
-      int cur_b = random(0,18);
-      background_color = cur_r  | (cur_g << 5) | (cur_b << 11); 
-      tft.fillScreen(background_color);
-      tft.drawString(2,42, "Left Won!" ,YELLOW,2);
-      tft.drawString(2,62, "Get Ready!" ,GREEN,2);
-      for (int i = 0; i <250; i++){
-        delay(10);
-        draw_paddles();
-      }
-      ballx = 64;
-      bally = 80;
-      if (ball_speed > 1) ball_speed--;
+      bally = 10;
     }
 }
