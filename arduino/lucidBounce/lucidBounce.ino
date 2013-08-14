@@ -60,45 +60,47 @@ ST7735 tft = ST7735(SS, dc, rst);
 
 //Create constants as such
 const float PIE = 3.141592; // value for pi
-const int tft_width = 128;
-const int tft_height = 160;
+const int tft_width =128;   //128;
+const int tft_height =160;   //160;
+const int paddle_width= 21;
+const int paddle_height=3;
+
+int level[]={50,150,250};
 int ball_radius=3;
 int bounce_count=1;
 int paddle_x= 60;
 int paddle_y= 152;
-int paddle_width= ball_radius*7;
-int paddle_height=3;
-float ballx = 60.0;
-float bally = 60.0;
-float deltay = 1.0;
-float deltax = .5;
+int num_balls=1;
+float ballx []= {60.0,10.0,20.0};
+float bally []= {60.0,80.0,77.0};
+float deltay[] = {1.0,1.0,1.0};
+float deltax[] = {.5,.5,.5};
+
+/*points 
+at 50 points you go to level 2 (2 balls)
+at 150 points you go to level 3 (3 balls)
+*/
+int points = 0;  
 
 int ball_speed = 24;
 
 
-int left_leds[] = {0,1,2};
-int left_score = 3;
-
-int right_leds[] = {5,6,7};
-int right_score = 3;
-
 int background_color =BLACK;
 void setup(void) {
+  Serial.begin(9600);
+  Serial.print("hello!");
+
   tft.initR();               // initialize a ST7735R chip
   tft.writecommand(ST7735_DISPON);
   tft.fillScreen(background_color);
   delay(700);
+  /*
   for(int i = 0; i < 3; i++){
     pinMode(left_leds[i],OUTPUT);
     pinMode(right_leds[i],OUTPUT);
 
-  }
-  for(int i = 0; i < 3; i++){
-    digitalWrite(left_leds[i],HIGH);
-    digitalWrite(right_leds[i],HIGH);
-
-  }
-  delay(500);
+  }*/
+   delay(500);
   
 }
 int cur_r = random(20,32);
@@ -109,7 +111,9 @@ void loop() {
   int color = cur_r  | (cur_g << 5) | (cur_b << 11); //what kind of calculation is this?
   
   draw_paddle();
-  draw_ball(color,ball_radius, bounce_count);
+  if (points > level[num_balls-1]) num_balls++;
+  draw_balls(num_balls);
+  
 //  if (bounce_count > 7){
 //    draw_ball(RED, ball_radius*2,bounce_count);
  // }
@@ -163,35 +167,13 @@ void draw_paddle(){
   //tft.fillRect(topLeftX,topLeftY,width, height, color);
   tft.fillRect(paddle_x-5, paddle_y-5, paddle_width*2, paddle_height+5, background_color);
   tft.fillRect(paddle_x, paddle_y, paddle_width, paddle_height, YELLOW);
-  Serial.print("current x =");
-  Serial.print(cur_x);
+ // Serial.print("current x =");
+ // Serial.print(cur_x);
   
   //DEBUG_PRINT ("I think I'm here");
 
 }
-/*
-void draw_paddles(){
-  int cur_x =  analogRead(3);
-  int cur_y =  1024 - analogRead(2);  
-  int hval = 620;
-  int lval = 350;
- 
-  if ( y1 < tft_height - 20  && cur_y > hval) y1++;
-  else if ( y1 > 0 && cur_y < lval ) y1--; 
- 
-  int cur_x2 =  analogRead(1);
-  int cur_y2 = 1024 - analogRead(0); 
 
-  if ( y2 < tft_height - 20 && cur_y2 > hval ) y2++;
-  else if (y2 > 0 && cur_y2 < lval ) y2--; 
-  
-  tft.fillRect(2, y1-3, 5, 27, background_color);
-  tft.fillRect(3, y1, 3, 20, YELLOW);
-  tft.fillRect(tft_width-3, y2-3, 5, 27,background_color);
-  tft.fillRect(tft_width-3, y2, 3, 20, YELLOW);
-}
-
-*/
 
 /*  function: draw_ball
     usage:  draw_ball(color, radius);
@@ -199,47 +181,66 @@ void draw_paddles(){
     draws the ball to the screen.  Also, controls ball logic for bouncing off the wall
     and winning conditions
 */
-void draw_ball(int color, int bradius, int &bounce_number){
-  // int bradius = 3;
+void draw_balls( int number_balls){
+     int bradius = 3;
+     int color[] = {RED,BLUE,YELLOW,GREEN};
+     
+     for ( int i=0 ; i < number_balls; i++){
+       
+      tft.fillCircle(ballx[i],bally[i], bradius+3, background_color);
+      tft.fillCircle(ballx[i], bally[i], bradius , color[i]);
+       
+      ballx[i] += deltax[i];
+      bally[i] += deltay[i];
+      //int lastBallx;
+      //int lastBally;
+       
+     
     //tft.fillCircle(centerX,centerY,radius,color);
-    tft.fillCircle(ballx,bally, bradius+3, background_color);
-    tft.fillCircle(ballx, bally, bradius , color);
-     /* ball velocity delta's   */
-    ballx += deltax;
-    bally += deltay;
+    //tft.fillCircle(ballx,bally, bradius+3, background_color);
     
-    if (ballx > tft_width -1) deltax *= -1;
-    else if (ballx <=1) deltax *= -1;
-    else if( ballx >= paddle_x && ballx <= paddle_x+paddle_width && bally> paddle_y-bradius){ 
-       if(bounce_number %5 ==0){
-          paddle_width-= ball_radius;
-      } 
-      deltay *= -1.1;
-      deltax *= 1.1;
-      bally=paddle_y-(bradius+1);
-      bounce_number++;
+     /* ball velocity delta's   */
 
-    }
-    else if (bally <= bradius ) deltay *= -1;
-     // losing condition   
-    else if(bally >  paddle_y ) {
+    
+    
+    if (ballx[i] > tft_width -1) deltax[i] *= -1;
+    else if (ballx[i] <=1) deltax[i] *= -1;
+    else if( ballx[i] >= paddle_x && ballx[i] <= paddle_x+paddle_width && bally[i]> paddle_y-bradius){ 
+       //if(bounce_number %5 ==0){
+       //   paddle_width-= ball_radius;
+      //} 
+      deltay[i] *= -1.1;
+      deltax[i] *= 1.1;
+      points+=10;
+
+      }
+      else if (bally[i] < 4 ) {
+        Serial.print("ball y=");
+        Serial.println(bally[i]);
+        Serial.print("\n");
+        //Serial.println(
+        deltay[i] *= -1;
+      }
+       // losing condition   
+      else if(bally[i] >  paddle_y ) {
   
     
-      int cur_r = random(0,26);
-      int cur_g = random(0,30);
-      int cur_b = random(0,18);
-      background_color = cur_r  | (cur_g << 5) | (cur_b << 11); 
-      tft.fillScreen(background_color);
-      tft.drawString(2,42, "YOU LOSE!" ,~background_color,2);
-      tft.drawString(2,62, "Get Ready!" ,CYAN,2);
-      deltax= random(-1,1)+.5;
-      deltay= random(0,1)?  +.5: 1;
+        int cur_r = random(0,26);
+        int cur_g = random(0,30);
+        int cur_b = random(0,18);
+        background_color = cur_r  | (cur_g << 5) | (cur_b << 11); 
+        tft.fillScreen(background_color);
+        tft.drawString(2,42, "YOU LOSE!" ,~background_color,2);
+        tft.drawString(2,62, "Get Ready!" ,CYAN,2);
+        deltax[i]= random(-1,1)+.5;
+        deltay[i]= random(0,1)?  +.5: 1;
    
-      delay(1000);
-      //draw_paddle();
+        delay(1000);
+        //draw_paddle();
 
       
-      ballx = 64;
-      bally = 10;
-    }
+        ballx[i] = 64.0;
+        bally[i] = 10.0;
+      }
+     }
 }
