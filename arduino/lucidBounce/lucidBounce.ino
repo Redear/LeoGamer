@@ -1,25 +1,45 @@
 /*
 File: lucidBounce.ino
-************************************************************
-Bounce is a Pong like game that gives the player a bouncing
-ball which increases with speed after every bounce off the
-control paddle.
+************************************************************ 
+    lucidBounce.ino is free software: you can redistribute it and/or modify
+    it under the terms of the GNU version 3 General Public License as 
+    published by the Free Software Foundation.  
 
-URL FOR TUTORIAL:: TODO
+    lucidBounce.ino is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-This file uses the adafruit library ST7735 which can be
-found at this url: XXXXXXXXXXXXXXXXXXXXXX
-
+    You should have received a copy of the GNU General Public License
+    along with lucidBounce.  If not, see <http://www.gnu.org/licenses/>.
+*************************************************************
+*************************************************************
+lucidBounce is a Pong like game that gives the player a bouncing
+ball which increases with speed  and number of balls after every 
+five bounces off the control paddle.
+Check out the tutorial for this game on our website:
+URL FOR TUTORIAL: http://www.lucidtronix.com/tutorials/55
+*************************************************************
+LIBRARIES USED:
+*************************************************************
+ARDUINO SPI.h
+Adafruit library ST7735 which can be
+found at this url: https://github.com/adafruit/Adafruit-ST7735-Library
+*************************************************************
+LINES AND WIRES:
+*************************************************************
 joystick read lines:
 digitalRead(12)
 int cur_x =  analogRead(0);
 int cur_y =  1024 - analogRead(2);  
 int cur_y =  1024 - analogRead(1);
-  i
 
+cs 10   // for MEGAs you probably want this to be pin 53
+dc 9
+rst 8  // you can also connect this to the Arduino reset
 	
 */
-
+#define DEBUG
 #ifdef DEBUG
   #define DEBUG_PRINT(x)  Serial.println (x)
 #else
@@ -76,50 +96,44 @@ float bally []= {60.0,80.0,77.0};
 float deltay[] = {1.0,1.0,1.0};
 float deltax[] = {.5,.5,.5};
 
-/*points 
+/*TODO: points 
 at 50 points you go to level 2 (2 balls)
 at 150 points you go to level 3 (3 balls)
 */
 int points = 0;  
-
 int ball_speed = 24;
-
-
 int background_color =BLACK;
+
+/*function: setup(void)
+  ****************************************
+  The typical setup method for arduino programs.
+  Here we initialize a TFT screen. 
+*/
 void setup(void) {
   Serial.begin(9600);
-  Serial.print("hello!");
-
+  DEBUG_PRINT ("I'm here");
   tft.initR();               // initialize a ST7735R chip
   tft.writecommand(ST7735_DISPON);
   tft.fillScreen(background_color);
-  delay(700);
-  /*
-  for(int i = 0; i < 3; i++){
-    pinMode(left_leds[i],OUTPUT);
-    pinMode(right_leds[i],OUTPUT);
-
-  }*/
-   delay(500);
-  
+  delay(1500); 
 }
 int cur_r = random(20,32);
 int cur_g = random(55,64);
 int cur_b = random(10,32);
 
+/*function: loop()
+  ***************************************
+  Arduino event loop function which runs continuously on the chip
+  while power is delivered.  Functions for balls and paddle are called 
+  repeatedly by this function.
+
+*/
 void loop() {  
-  int color = cur_r  | (cur_g << 5) | (cur_b << 11); //what kind of calculation is this?
-  
+  int color = cur_r  | (cur_g << 5) | (cur_b << 11);
   draw_paddle();
   if (points > level[num_balls-1]) num_balls++;
   draw_balls(num_balls);
-  
-//  if (bounce_count > 7){
-//    draw_ball(RED, ball_radius*2,bounce_count);
- // }
-  //tft.drawString(2,42, "debug with drawString" ,~background_color,2);
   delay(ball_speed);
- 
 }
 
 /*function: draw_input_text
@@ -151,27 +165,19 @@ void draw_input_text(){
   draws the bounce paddle to the screen using analogRead for current x and y
   working on a two potentiameter joystick that reads analog values from 0 - 1024
   525 is straight up and down.  
-  
+  tft.fillRect(topLeftX,topLeftY,width, height, color);
 */
 void draw_paddle(){
   int cur_x =  analogRead(0);
-  //int cur_y =  1024 - analogRead(2);  
   int cur_y =  1024 - analogRead(1);
   int rightVal = 620; //what the hell are these
   int leftVal = 350;
- 
   if ( paddle_x+15 < tft_width  && cur_x > rightVal) paddle_x+=3;//move paddle right
-  else if ( paddle_x > 0 && cur_x < leftVal ) paddle_x-=3; //move paddle left 
-  
-  
-  //tft.fillRect(topLeftX,topLeftY,width, height, color);
+  else if ( paddle_x > 0 && cur_x < leftVal ) paddle_x-=3; //move paddle left  
   tft.fillRect(paddle_x-5, paddle_y-5, paddle_width*2, paddle_height+5, background_color);
   tft.fillRect(paddle_x, paddle_y, paddle_width, paddle_height, YELLOW);
- // Serial.print("current x =");
- // Serial.print(cur_x);
-  
-  //DEBUG_PRINT ("I think I'm here");
-
+ // DEBUG_PRINT("current x =");
+ // DEBUG_PRINT(cur_x);
 }
 
 
@@ -180,51 +186,32 @@ void draw_paddle(){
     *************************************************
     draws the ball to the screen.  Also, controls ball logic for bouncing off the wall
     and winning conditions
+    tft.fillCircle(centerX,centerY,radius,color);
 */
 void draw_balls( int number_balls){
      int bradius = 3;
-     int color[] = {RED,BLUE,YELLOW,GREEN};
-     
-     for ( int i=0 ; i < number_balls; i++){
-       
+     int color[] = {RED,BLUE,YELLOW,GREEN};     
+     for ( int i=0 ; i < number_balls; i++){     
       tft.fillCircle(ballx[i],bally[i], bradius+3, background_color);
-      tft.fillCircle(ballx[i], bally[i], bradius , color[i]);
-       
+      tft.fillCircle(ballx[i], bally[i], bradius , color[i]);     
       ballx[i] += deltax[i];
-      bally[i] += deltay[i];
-      //int lastBallx;
-      //int lastBally;
-       
-     
-    //tft.fillCircle(centerX,centerY,radius,color);
-    //tft.fillCircle(ballx,bally, bradius+3, background_color);
-    
-     /* ball velocity delta's   */
-
-    
-    
+      bally[i] += deltay[i];      
+     /* ball velocity delta's   */   
     if (ballx[i] > tft_width -1) deltax[i] *= -1;
     else if (ballx[i] <=1) deltax[i] *= -1;
     else if( ballx[i] >= paddle_x && ballx[i] <= paddle_x+paddle_width && bally[i]> paddle_y-bradius){ 
-       //if(bounce_number %5 ==0){
-       //   paddle_width-= ball_radius;
-      //} 
       deltay[i] *= -1.1;
       deltax[i] *= 1.1;
       points+=10;
 
       }
       else if (bally[i] < 4 ) {
-        Serial.print("ball y=");
-        Serial.println(bally[i]);
-        Serial.print("\n");
-        //Serial.println(
+        DEBUG_PRINT("ball y=");
+        DEBUG_PRINT(bally[i]);
         deltay[i] *= -1;
       }
        // losing condition   
       else if(bally[i] >  paddle_y ) {
-  
-    
         int cur_r = random(0,26);
         int cur_g = random(0,30);
         int cur_b = random(0,18);
@@ -236,9 +223,7 @@ void draw_balls( int number_balls){
         deltay[i]= random(0,1)?  +.5: 1;
    
         delay(1000);
-        //draw_paddle();
-
-      
+        //draw_paddle();     
         ballx[i] = 64.0;
         bally[i] = 10.0;
       }
