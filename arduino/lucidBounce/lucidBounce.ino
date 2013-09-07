@@ -84,21 +84,23 @@ const int tft_width =128;   //128;
 const int tft_height =160;   //160;
 const int paddle_width= 21;
 const int paddle_height=3;
+const int BIG_WINNER= 440;
+const int NUM_LEVELS = 5;
 
-int level[]={50,150,250};
+int level[]={50,150,250,350,450};
+
 int ball_radius=3;
 int bounce_count=1;
 int paddle_x= 60;
 int paddle_y= 152;
 int num_balls=1;
-float ballx []= {60.0,10.0,20.0};
-float bally []= {60.0,80.0,77.0};
-float deltay[] = {1.0,1.0,1.0};
-float deltax[] = {.5,.5,.5};
+float ballx []= {60.0,10.0,20.0,50.0,44.0};
+float bally []= {60.0,80.0,77.0,88.0,76.0};
+float deltay[] = {1.0,1.0,1.0,1.0,1.0};
+float deltax[] = {.5,.5,.5,.5,.5};
 
 /*TODO: points 
-at 50 points you go to level 2 (2 balls)
-at 150 points you go to level 3 (3 balls)
+
 */
 int points = 0;  
 int ball_speed = 24;
@@ -131,6 +133,18 @@ int cur_b = random(10,32);
 void loop() {  
   int color = cur_r  | (cur_g << 5) | (cur_b << 11);
   draw_paddle();
+  if (points> BIG_WINNER) {
+    tft.drawString(2,42, "You Win!" ,~background_color,2);
+    //reset game ? 
+    delay(1000); 
+    num_balls=1;
+    for (int i=0; i< 5;i++){
+       deltay[i]+=.5;
+       deltax[i]+=.5;
+    } 
+    points = 0;
+  
+  }
   if (points > level[num_balls-1]) num_balls++;
   draw_balls(num_balls);
   delay(ball_speed);
@@ -190,12 +204,12 @@ void draw_paddle(){
 */
 void draw_balls( int number_balls){
      int bradius = 3;
-     int color[] = {RED,BLUE,YELLOW,GREEN};     
+     int color[] = {RED,BLUE,YELLOW,GREEN,WHITE};     
      for ( int i=0 ; i < number_balls; i++){     
-      tft.fillCircle(ballx[i],bally[i], bradius+3, background_color);
-      tft.fillCircle(ballx[i], bally[i], bradius , color[i]);     
+      tft.fillCircle(ballx[i],bally[i], bradius, background_color);  
       ballx[i] += deltax[i];
-      bally[i] += deltay[i];      
+      bally[i] += deltay[i]; 
+      tft.fillCircle(ballx[i], bally[i], bradius , color[i]);        
      /* ball velocity delta's   */   
     if (ballx[i] > tft_width -1) deltax[i] *= -1;
     else if (ballx[i] <=1) deltax[i] *= -1;
@@ -205,7 +219,7 @@ void draw_balls( int number_balls){
       points+=10;
 
       }
-      else if (bally[i] < 4 ) {
+      else if (bally[i] < 2+ball_radius) {
         DEBUG_PRINT("ball y=");
         DEBUG_PRINT(bally[i]);
         deltay[i] *= -1;
@@ -215,10 +229,11 @@ void draw_balls( int number_balls){
         int cur_r = random(0,26);
         int cur_g = random(0,30);
         int cur_b = random(0,18);
-        background_color = cur_r  | (cur_g << 5) | (cur_b << 11); 
-        tft.fillScreen(background_color);
+        background_color = cur_r  | (cur_g << 5) | (cur_b << 11);        
         tft.drawString(2,42, "YOU LOSE!" ,~background_color,2);
+        tft.fillScreen(background_color);
         tft.drawString(2,62, "Get Ready!" ,CYAN,2);
+        tft.fillScreen(background_color);
         deltax[i]= random(-1,1)+.5;
         deltay[i]= random(0,1)?  +.5: 1;
    
