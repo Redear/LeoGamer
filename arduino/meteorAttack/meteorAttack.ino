@@ -77,7 +77,7 @@ ST7735 tft = ST7735(SS, dc, rst);
 */
 const int tft_width = 128;
 const int tft_height = 160;
-const int background_color =BLACK;
+const int BG_COLOR =BLACK;
 const int BROOKLYN_COLOR= CYAN;
 const int QUEENS_COLOR = MAGENTA;
 const int BRONX_COLOR = YELLOW;
@@ -85,7 +85,15 @@ const int CANON_COLOR = RED;
 const int METEOR_COLOR = GREEN;
 const int TARGET_COUNT = 5;//can vary if the number of targets is changed
 const int CITY_HEIGHT = 12;
+const int CITY_WIDTH = 25;
 const int CANON_HEIGHT = 8;
+const int CANON_WIDTH = 4;
+const int CITY_HIT_STRENGTH = 6;
+const int CANON_HIT_STRENGHT = 2;
+const int METEOR_MAX= 20;
+const int TARGET_TOTAL = 5;
+const int LOOP_SPEED = 24;
+const int SHELLS_TOTAL = 20;
 
 int xScaled=60;
 int yScaled=76;
@@ -94,19 +102,26 @@ int targetY=0;
 int canonFireX=0;
 int canonFireY=0;
 int btnPin0 = 12;
-unsigned int lastPress= 0;
+int meteorNum=0;
 
+float meteorDY= 0.4;
+int meteorCount= 0;
+Target meteorArray[METEOR_MAX];
+Target canonShells[SHELLS_TOTAL];
+unsigned int lastPress= 0;
+Target ally();
+Target enemy();
 /*Target: 
   x and y are static constants
   strength depends on type of Target
   width and height can be changed to allow for other
   shapes after implemented with rectangles first
 */
-Target brooklyn(0.0,tft_height-CITY_HEIGHT,25,CITY_HEIGHT,4);
-Target canon0(26.0,tft_height-CANON_HEIGHT,12,CANON_HEIGHT,2);
-Target queens(50.0,tft_height-CITY_HEIGHT,25,CITY_HEIGHT,4);
-Target canon1(76.0,tft_height-CANON_HEIGHT,12,CANON_HEIGHT,2);
-Target bronx(100.0,tft_height-CITY_HEIGHT,25,CITY_HEIGHT,4);
+Target brooklyn(0.0,tft_height-CITY_HEIGHT,CITY_WIDTH,CITY_HEIGHT,CITY_HIT_STRENGTH);
+Target canon0(35.0,tft_height-CANON_HEIGHT,CANON_WIDTH,CANON_HEIGHT,CANON_HIT_STRENGHT);
+Target queens(50.0,tft_height-CITY_HEIGHT,CITY_WIDTH,CITY_HEIGHT,CITY_HIT_STRENGTH);
+Target canon1(85.0,tft_height-CANON_HEIGHT,CANON_WIDTH,CANON_HEIGHT,CANON_HIT_STRENGHT);
+Target bronx(100.0,tft_height-CITY_HEIGHT,CITY_WIDTH,CITY_HEIGHT,CITY_HIT_STRENGTH);
 
 Target targets[5]={brooklyn,canon0,queens,canon1,bronx};
 
@@ -135,8 +150,14 @@ void setup(void) {
   DEBUG_PRINT ("I'm here");
   tft.initR();               // initialize a ST7735R chip
   tft.writecommand(ST7735_DISPON);
-  tft.fillScreen(background_color);
+  tft.fillScreen(BG_COLOR);
   tft.drawString(4,4,"Starting...",CYAN,1);
+  //int meteorNum = random(5,METEOR_MAX);
+  meteorNum = 10;
+  //tft.drawString(20,80,meteorNum, RED,2);
+  //tft.drawChar(20,80,meteorNum,RED,2);
+  
+  createMeteorArray();
   delay(1500); 
 }
 
@@ -147,10 +168,20 @@ void setup(void) {
   repeatedly by this function.
 */
 void loop() { 
+  //int meteorN= metoerNum;
+  //int targetN = t;
+  for ( int i = 0 ; i < meteorNum; i++){
+    for (int j = 0; j < TARGET_TOTAL;j++){
+      checkCollision(meteorArray[i],targets[j]);
+    }
+  }
   drawTargets();
   drawCanonSite();
+  drawMeteors();
  // int startX = cur_r  | (cur_g << 5) | (cur_b << 11);
-  //delay(10);
+  delay(LOOP_SPEED);
+  DEBUG_PRINT(meteorNum);
+  DEBUG_PRINT(meteorCount);
 }
 
 void drawCanonSite(){
@@ -162,27 +193,29 @@ void drawCanonSite(){
   int yDiff;
   xDiff = map(xRaw,minVal,maxVal,-1,2);
   yDiff = map(yRaw,minVal,maxVal,2,-2);
-  tft.fillRect(targetX-6,targetY+3,6,1,background_color);
-  tft.fillRect(targetX+3,targetY-6,1,6,background_color);
+  tft.fillRect(targetX,targetY+3,6,1,BG_COLOR);
+  tft.fillRect(targetX+3,targetY,1,6,BG_COLOR);
 
   targetX+= xDiff;
   targetY+= yDiff;
   targetX = constrain(targetX,5,tft_width-5);
   targetY = constrain(targetY,5,tft_width-5);
-  tft.fillRect(targetX-6,targetY+3,6,1,BLUE);
-  tft.fillRect(targetX+3,targetY-6,1,6,BLUE);
+  tft.fillRect(targetX,targetY+3,6,1,BLUE);
+  tft.fillRect(targetX+3,targetY,1,6,BLUE);
   if (digitalRead(btnPin0) && millis()-lastPress >400){
-    canonFireX=targetX;
-    canonFireY=targetY;
-    //shootCanon(int x, int y);
-    tft.fillCircle(canonFireX,canonFireY,5,GREEN);
+    //canonShells[SHELLS_USED].x = targetX;
+    //canonShells[SHELLS_USED].y = targetY;
+    shootCanon(targetX, targetY);
+    tft.fillCircle(targetX,targetY,5,GREEN);
   }
+  /*
   DEBUG_PRINT(xRaw);
   DEBUG_PRINT(yRaw);
   DEBUG_PRINT(targetX);
   DEBUG_PRINT(targetY);
   DEBUG_PRINT(xDiff);
   DEBUG_PRINT(yDiff);
+  */
 }
 
 
@@ -198,3 +231,63 @@ void drawTargets(){
     
   }
 } 
+void createMeteorArray(){
+  
+  for (int i = 0; i < meteorNum; i++){
+     meteorArray[i].x= random(10,tft_width-10);
+     meteorArray[i].y=2;
+     meteorArray[i].radius=2;
+     //tft.fillCircle(meteorArray[i].x, meteorArray[i].y, meteorArray[i].radius,BLUE); 
+    }
+    //DEBUG_PRINT(meteorNum);
+  
+}
+
+void drawMeteors(){ 
+  DEBUG_PRINT("CALLED drawMeteors");
+  if (meteorCount >= meteorNum){meteorCount = 0;}
+  for ( int j = 0; j < meteorCount; j++){
+      tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BG_COLOR);
+      DEBUG_PRINT(meteorArray[j].x);
+      DEBUG_PRINT(meteorArray[j].y);
+      DEBUG_PRINT(meteorArray[j].radius);
+      meteorArray[j].y+=meteorDY;
+      tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BLUE);     
+      if (meteorArray[j].y >= tft_height){meteorArray[j]= Target(); }  
+    }
+  meteorCount++;
+}
+
+void drawExplosion(int someX, int someY){
+  int explodeTime=4;
+  for (int i =0 ; i < explodeTime; i ++){
+    tft.fillCircle(someX, someY, i , YELLOW);
+  }
+  for ( int j=explodeTime; j> 0; j--){
+    tft.fillCircle(someX,someY,j , BG_COLOR);
+    tft.fillCircle(someX,someY,j , YELLOW);
+  }
+  
+}
+
+void checkCollision (Target enemy, Target ally){
+  DEBUG_PRINT("COLLISION CHECKER");
+  DEBUG_PRINT(enemy.x);
+  DEBUG_PRINT(enemy.y);
+  if (enemy.x > ally.x && enemy.x < (ally.x + ally.width) && enemy.y > ally.y){
+     drawExplosion(enemy.x, enemy.y); 
+  }
+}
+
+void shootCanon (int siteX, int siteY){
+  float distToX = 0;
+  float distToY = 0;
+  
+  if (SHELLS_USED <=TOTAL_SHELLS ){
+    canonShells[SHELLS_USED].x = targetX;
+    canonShells[SHELLS_USED].y = targetY;
+    for (int i = 0 ; i < TOTAL_SHELLS; i++){
+      
+    
+    
+}
