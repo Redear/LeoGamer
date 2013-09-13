@@ -109,6 +109,7 @@ int meteorCount= 0;
 Target meteorArray[METEOR_MAX];
 Target canonShells[SHELLS_TOTAL];
 unsigned int lastPress= 0;
+int shells_used=0;
 Target ally();
 Target enemy();
 /*Target: 
@@ -156,7 +157,8 @@ void setup(void) {
   meteorNum = 10;
   //tft.drawString(20,80,meteorNum, RED,2);
   //tft.drawChar(20,80,meteorNum,RED,2);
-  
+  tft.fillScreen(BG_COLOR);
+
   createMeteorArray();
   delay(1500); 
 }
@@ -175,13 +177,18 @@ void loop() {
       checkCollision(meteorArray[i],targets[j]);
     }
   }
+   for ( int i = 0 ; i < meteorNum; i++){
+    for (int j = 0; j < SHELLS_TOTAL;j++){
+      checkCollision(meteorArray[i],targets[j]);
+    }
+  }
   drawTargets();
   drawCanonSite();
   drawMeteors();
  // int startX = cur_r  | (cur_g << 5) | (cur_b << 11);
-  delay(LOOP_SPEED);
-  DEBUG_PRINT(meteorNum);
-  DEBUG_PRINT(meteorCount);
+  //delay(LOOP_SPEED);
+  //DEBUG_PRINT(meteorNum);
+  //DEBUG_PRINT(meteorCount);
 }
 
 void drawCanonSite(){
@@ -244,13 +251,13 @@ void createMeteorArray(){
 }
 
 void drawMeteors(){ 
-  DEBUG_PRINT("CALLED drawMeteors");
+  //DEBUG_PRINT("CALLED drawMeteors");
   if (meteorCount >= meteorNum){meteorCount = 0;}
   for ( int j = 0; j < meteorCount; j++){
       tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BG_COLOR);
-      DEBUG_PRINT(meteorArray[j].x);
-      DEBUG_PRINT(meteorArray[j].y);
-      DEBUG_PRINT(meteorArray[j].radius);
+      //DEBUG_PRINT(meteorArray[j].x);
+      //DEBUG_PRINT(meteorArray[j].y);
+      //DEBUG_PRINT(meteorArray[j].radius);
       meteorArray[j].y+=meteorDY;
       tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BLUE);     
       if (meteorArray[j].y >= tft_height){meteorArray[j]= Target(); }  
@@ -271,23 +278,30 @@ void drawExplosion(int someX, int someY){
 }
 
 void checkCollision (Target enemy, Target ally){
-  DEBUG_PRINT("COLLISION CHECKER");
-  DEBUG_PRINT(enemy.x);
-  DEBUG_PRINT(enemy.y);
+  //DEBUG_PRINT("COLLISION CHECKER");
+  //DEBUG_PRINT(enemy.x);
+  //DEBUG_PRINT(enemy.y);
   if (enemy.x > ally.x && enemy.x < (ally.x + ally.width) && enemy.y > ally.y){
      drawExplosion(enemy.x, enemy.y); 
+     //kill(enemy);
+     //kill(ally);
   }
 }
 
 void shootCanon (int siteX, int siteY){
-  float distToX = 0;
-  float distToY = 0;
+  //float distToX = 0;
+  //float distToY = 0;
   
-  if (SHELLS_USED <=TOTAL_SHELLS ){
-    canonShells[SHELLS_USED].x = targetX;
-    canonShells[SHELLS_USED].y = targetY;
-    for (int i = 0 ; i < TOTAL_SHELLS; i++){
-      
-    
-    
+  if (shells_used <=SHELLS_TOTAL ){
+    canonShells[shells_used].x = targetX;
+    canonShells[shells_used].y = targetY;
+    for (int i = 0 ; i < SHELLS_TOTAL; i++){
+      drawExplosion(siteX,siteY);
+      tft.drawLine(canon1.x,canon1.y,siteX,siteY,GREEN);
+      tft.drawLine(canon0.x,canon0.y,siteX,siteY,GREEN);  //drawLine(x1,y1,x2,y2,color);
+    }
+   shells_used++;           
+  } else {
+    tft.drawString(10,50,"No more shells left",RED,1);
+  }
 }
