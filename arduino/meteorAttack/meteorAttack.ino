@@ -88,8 +88,9 @@ const int CITY_HEIGHT = 12;
 const int CITY_WIDTH = 25;
 const int CANON_HEIGHT = 8;
 const int CANON_WIDTH = 4;
-const int CITY_HIT_STRENGTH = 6;
-const int CANON_HIT_STRENGHT = 2;
+const int CITY_HIT_STRENGTH = 3;
+const int CANON_HIT_STRENGTH = 2;
+const int METEOR_HIT_STRENGTH = 1;
 const int METEOR_MAX= 20;
 const int TARGET_TOTAL = 5;
 const int LOOP_SPEED = 24;
@@ -97,8 +98,8 @@ const int SHELLS_TOTAL = 20;
 
 int xScaled=60;
 int yScaled=76;
-int targetX=0;
-int targetY=0;
+float targetX=0.0;
+float targetY=0.0;
 int canonFireX=0;
 int canonFireY=0;
 int btnPin0 = 12;
@@ -119,9 +120,9 @@ Target enemy();
   shapes after implemented with rectangles first
 */
 Target brooklyn(0.0,tft_height-CITY_HEIGHT,CITY_WIDTH,CITY_HEIGHT,CITY_HIT_STRENGTH);
-Target canon0(35.0,tft_height-CANON_HEIGHT,CANON_WIDTH,CANON_HEIGHT,CANON_HIT_STRENGHT);
+Target canon0(35.0,tft_height-CANON_HEIGHT,CANON_WIDTH,CANON_HEIGHT,CANON_HIT_STRENGTH);
 Target queens(50.0,tft_height-CITY_HEIGHT,CITY_WIDTH,CITY_HEIGHT,CITY_HIT_STRENGTH);
-Target canon1(85.0,tft_height-CANON_HEIGHT,CANON_WIDTH,CANON_HEIGHT,CANON_HIT_STRENGHT);
+Target canon1(85.0,tft_height-CANON_HEIGHT,CANON_WIDTH,CANON_HEIGHT,CANON_HIT_STRENGTH);
 Target bronx(100.0,tft_height-CITY_HEIGHT,CITY_WIDTH,CITY_HEIGHT,CITY_HIT_STRENGTH);
 
 Target targets[5]={brooklyn,canon0,queens,canon1,bronx};
@@ -157,10 +158,12 @@ void setup(void) {
   meteorNum = 10;
   //tft.drawString(20,80,meteorNum, RED,2);
   //tft.drawChar(20,80,meteorNum,RED,2);
-  tft.fillScreen(BG_COLOR);
-
   createMeteorArray();
-  delay(1500); 
+  tft.fillScreen(BG_COLOR);
+  tft.drawString(8,8,"http://lucidtronix.com",CYAN,1);
+  delay(2000);
+  tft.fillScreen(BG_COLOR);
+  //delay(1500); 
 }
 
 /*function: loop()
@@ -174,17 +177,31 @@ void loop() {
   //int targetN = t;
   for ( int i = 0 ; i < meteorNum; i++){
     for (int j = 0; j < TARGET_TOTAL;j++){
-      checkCollision(meteorArray[i],targets[j]);
+      if(meteorArray[i].killed==0 && targets[j].killed==0)
+        checkCollision(meteorArray[i],targets[j]);
     }
   }
-   for ( int i = 0 ; i < meteorNum; i++){
+  //this is stupid.  the shells should just be at an x and y once and thats it
+  //shouldn't need to loop through anything 
+/*   for ( int i = 0 ; i < meteorNum; i++){
     for (int j = 0; j < SHELLS_TOTAL;j++){
-      checkCollision(meteorArray[i],targets[j]);
+      if(meteorArray[i].killed==0 || canonShells[j].killed==0)
+        Serial.print("meteorx , y : ");
+        Serial.println(meteorArray[i].x);
+        
+        Serial.println(meteorArray[i].y);
+        Serial.print("shells x, y ");
+        Serial.println(canonShells[j].x);
+        Serial.println(canonShells[j].y);
+     
+        checkCollision(meteorArray[i],targets[j]);
     }
-  }
+    }
+    */ 
   drawTargets();
   drawCanonSite();
   drawMeteors();
+  //rotateText();
  // int startX = cur_r  | (cur_g << 5) | (cur_b << 11);
   //delay(LOOP_SPEED);
   //DEBUG_PRINT(meteorNum);
@@ -196,8 +213,8 @@ void drawCanonSite(){
   int yRaw =  analogRead(1);
   int minVal = 0;
   int maxVal = 1024;
-  int xDiff;
-  int yDiff;
+  float xDiff;
+  float yDiff;
   xDiff = map(xRaw,minVal,maxVal,-1,2);
   yDiff = map(yRaw,minVal,maxVal,2,-2);
   tft.fillRect(targetX,targetY+3,6,1,BG_COLOR);
@@ -212,8 +229,12 @@ void drawCanonSite(){
   if (digitalRead(btnPin0) && millis()-lastPress >400){
     //canonShells[SHELLS_USED].x = targetX;
     //canonShells[SHELLS_USED].y = targetY;
+   // Serial.print("targetx : ");
+    //Serial.println(targetX);
+   // Serial.print("targety :");
+   // Serial.println(targetY);
     shootCanon(targetX, targetY);
-    tft.fillCircle(targetX,targetY,5,GREEN);
+    //tft.fillCircle(targetX,targetY,5,GREEN);
   }
   /*
   DEBUG_PRINT(xRaw);
@@ -228,14 +249,17 @@ void drawCanonSite(){
 
 void drawTargets(){
   //Target *oneTarget;
-  
   for (int i = 0; i< TARGET_COUNT;i++){
-    if ( i % 2 == 0){
-         tft.fillRect(targets[i].x, targets[i].y, targets[i].width, targets[i].height, QUEENS_COLOR);
-    }else {
-      tft.fillRect(targets[i].x, targets[i].y, targets[i].width, targets[i].height, CANON_COLOR);
-    }
-    
+    if(targets[i].killed==0){
+      //draw cities
+      if ( i % 2 == 0){
+           tft.fillRoundRect(targets[i].x, targets[i].y, targets[i].width, targets[i].height,8, QUEENS_COLOR);
+           tft.fillRect(targets[i].x, targets[i].y, 2,6,QUEENS_COLOR);
+      //draw canons
+      }else {
+        tft.fillRect(targets[i].x, targets[i].y, targets[i].width, targets[i].height, CANON_COLOR);
+      }
+    }   
   }
 } 
 void createMeteorArray(){
@@ -244,6 +268,7 @@ void createMeteorArray(){
      meteorArray[i].x= random(10,tft_width-10);
      meteorArray[i].y=2;
      meteorArray[i].radius=2;
+     meteorArray[i].strength=METEOR_HIT_STRENGTH;
      //tft.fillCircle(meteorArray[i].x, meteorArray[i].y, meteorArray[i].radius,BLUE); 
     }
     //DEBUG_PRINT(meteorNum);
@@ -254,54 +279,116 @@ void drawMeteors(){
   //DEBUG_PRINT("CALLED drawMeteors");
   if (meteorCount >= meteorNum){meteorCount = 0;}
   for ( int j = 0; j < meteorCount; j++){
-      tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BG_COLOR);
-      //DEBUG_PRINT(meteorArray[j].x);
-      //DEBUG_PRINT(meteorArray[j].y);
-      //DEBUG_PRINT(meteorArray[j].radius);
-      meteorArray[j].y+=meteorDY;
-      tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BLUE);     
-      if (meteorArray[j].y >= tft_height){meteorArray[j]= Target(); }  
+    if(meteorArray[j].killed==0){
+        tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BG_COLOR);
+        //DEBUG_PRINT(meteorArray[j].x);
+        //DEBUG_PRINT(meteorArray[j].y);
+        //DEBUG_PRINT(meteorArray[j].radius);
+        meteorArray[j].y+=meteorDY;
+        tft.fillCircle(meteorArray[j].x,meteorArray[j].y,meteorArray[j].radius,BLUE);     
+        if (meteorArray[j].y >= tft_height){meteorArray[j].killed=1; }  
     }
+  }
   meteorCount++;
 }
 
 void drawExplosion(int someX, int someY){
   int explodeTime=4;
-  for (int i =0 ; i < explodeTime; i ++){
-    tft.fillCircle(someX, someY, i , YELLOW);
-  }
-  for ( int j=explodeTime; j> 0; j--){
-    tft.fillCircle(someX,someY,j , BG_COLOR);
+  int stage1=2;
+  int stage2=4;
+  int stage3=6;
+  tft.fillCircle(someX, someY,stage1, WHITE);
+  delay(2);
+  tft.fillCircle(someX, someY,stage2, YELLOW);
+  delay(2);
+  tft.fillCircle(someX, someY,stage3, 0xFF0A);//trying to get orange
+  for ( int j=stage3; j> 0; j--){    
     tft.fillCircle(someX,someY,j , YELLOW);
+    tft.fillCircle(someX,someY,j , BG_COLOR);
   }
   
 }
 
-void checkCollision (Target enemy, Target ally){
+void checkCollision (Target & enemy, Target & ally){
   //DEBUG_PRINT("COLLISION CHECKER");
-  //DEBUG_PRINT(enemy.x);
+ // DEBUG_PRINT(enemy.x);
+ // DEBUG_PRINT(enemy.y);
+  //  DEBUG_PRINT(enemy.x);
   //DEBUG_PRINT(enemy.y);
-  if (enemy.x > ally.x && enemy.x < (ally.x + ally.width) && enemy.y > ally.y){
-     drawExplosion(enemy.x, enemy.y); 
-     //kill(enemy);
-     //kill(ally);
+  
+  if (enemy.killed==0 && ally.killed==0){
+  //if (enemy.x > ally.x && enemy.x < (ally.x + ally.width) && enemy.y > ally.y){
+  if (enemy.distance(ally) < 20){ 
+     Serial.println(enemy.distance(ally));
+     DEBUG_PRINT("kill shot"); 
+    drawExplosion(enemy.x, enemy.y);
+    //if (enemy.strength<=CANON_HIT_STRENGTH){
+      enemy.killed=1;// turn kill to true
+      enemy.x=-1;
+      enemy.y=-1;
+    //} else{enemy.strength-=2;}
+    if (ally.strength<=0){ally.killed=1;}  // turn kill to true
+    else{ally.strength-=2;}
+  }
   }
 }
 
-void shootCanon (int siteX, int siteY){
+void shootCanon (float siteX, float siteY){
   //float distToX = 0;
   //float distToY = 0;
   
   if (shells_used <=SHELLS_TOTAL ){
-    canonShells[shells_used].x = targetX;
-    canonShells[shells_used].y = targetY;
-    for (int i = 0 ; i < SHELLS_TOTAL; i++){
-      drawExplosion(siteX,siteY);
+    canonShells[shells_used].x = siteX;
+    canonShells[shells_used].y = siteY;
+    canonShells[shells_used].strength=1;
+    //for (int i = 0 ; i < SHELLS_TOTAL; i++){   
       tft.drawLine(canon1.x,canon1.y,siteX,siteY,GREEN);
       tft.drawLine(canon0.x,canon0.y,siteX,siteY,GREEN);  //drawLine(x1,y1,x2,y2,color);
-    }
-   shells_used++;           
+      delay(5);
+     
+      drawExplosion(siteX,siteY);
+    //}
+            
   } else {
-    tft.drawString(10,50,"No more shells left",RED,1);
+    tft.drawString(10,50,"Canons Empty",BLUE,2);
+  }
+  for ( int i = 0 ; i < meteorNum; i++){
+      
+      //if(meteorArray[i].distance(canonShells[shells_used]) <20){
+        Serial.print("meteor x,  y : ");
+        Serial.print(meteorArray[i].x); 
+        Serial.print(" ");
+        Serial.println(meteorArray[i].y);
+        Serial.print("shellx");
+        Serial.print(canonShells[shells_used].x);
+        Serial.print("shelly");
+        Serial.print(canonShells[shells_used].y);
+     // }
+         
+        checkCollision(meteorArray[i],canonShells[shells_used]);
+   }
+   shells_used++; 
+}
+void rotateText(){
+  for (int i = 0; i<4; i++){
+    tft.fillScreen(BLACK);
+    Serial.println(tft.getRotation(), DEC);
+    
+    tft.setCursor(0,30);
+    tft.setTextColor(RED);
+    tft.setTextSize(1);
+    tft.println("hELLO WORLD!");
+    tft.setTextColor(YELLOW);
+    tft.setTextSize(2);
+    tft.println("hellow World");
+    tft.setTextColor(GREEN);
+    tft.setTextSize(3);
+    tft.println("hellow World");
+    tft.setTextColor(BLUE);
+    tft.setTextSize(4);
+    tft.print(1234.343);
+    while(!Serial.available());
+    Serial.read(); Serial.read(); Serial.read();
+    tft.setRotation(tft.getRotation()+1);
   }
 }

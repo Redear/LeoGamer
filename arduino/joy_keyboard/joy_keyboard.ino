@@ -1,4 +1,4 @@
-/* LucidTronix Alarm Clock 
+/* LucidTronix joy_keyboard 
  * DS1307 based rtc clock
  * For instructions, details and schematic, See:
  * http://www.lucidtronix.com/tutorials/42
